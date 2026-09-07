@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Stealth</title>
+
+<!-- iOS "Add to Home Screen" app behavior -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Stealth">
+<meta name="theme-color" content="#000000">
+<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAIAAAB7GkOtAAADEUlEQVR4nO3BgQAAAADDoPlTX+EAVQEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMBvArQAAVkUTe8AAAAASUVORK5CYII=">
+
+<style>
+  :root{
+    --bg:#000000; --panel:#111214; --panel2:#1a1c1f; --border:#2a2c30;
+    --text:#f2f3f5; --muted:#8a8d94; --accent2:#22c3a6; --danger:#ff5d5d;
+    --mono:'SF Mono',Consolas,'Courier New',monospace;
+    --safe-top: env(safe-area-inset-top);
+    --safe-bottom: env(safe-area-inset-bottom);
+    --color-1: 0 100% 63%;
+    --color-2: 270 100% 63%;
+    --color-3: 210 100% 63%;
+    --color-4: 195 100% 63%;
+    --color-5: 90 100% 63%;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Roboto,sans-serif;
+    overscroll-behavior:none;
+  }
+  #sparks{
+    position:fixed; top:0; left:0; width:100%; height:100%;
+    background:transparent; pointer-events:none; z-index:0;
+  }
+  .app{
+    position:relative; z-index:1;
+    max-width:520px; margin:0 auto; min-height:100vh;
+    padding: calc(var(--safe-top) + 1.25rem) 1.1rem calc(var(--safe-bottom) + 5.5rem);
+    display:flex; flex-direction:column;
+  }
+  header{margin-bottom:1.75rem; text-align:center;}
+  .wordmark{
+    font-size:2.6rem; font-weight:700; letter-spacing:0.08em; margin:0;
+    display:flex; align-items:center; justify-content:center; gap:0.5rem;
+    text-align:center; text-transform:uppercase; font-family:var(--mono);
+    color:#f2f3f5;
+  }
+  .wordmark .dot{ display:none; }
+  .sub{color:var(--muted); font-size:0.85rem; margin:0.4rem 0 0; line-height:1.5; text-align:center;}
+
+  .screen{display:none; flex:1; flex-direction:column;}
+  .screen.active{display:flex;}
+
+  label{display:block; font-size:0.78rem; color:var(--muted); margin:1.1rem 0 0.4rem; text-transform:uppercase; letter-spacing:0.04em;}
+  label:first-child{margin-top:0;}
+  textarea, input[type=text], input[type=password]{
+    width:100%; background:var(--panel); border:1px solid var(--border);
+    border-radius:12px; color:var(--text); padding:0.8rem 0.9rem;
+    font-family:inherit; font-size:0.95rem; resize:vertical; -webkit-appearance:none;
+  }
+  textarea{min-height:88px; font-family:var(--mono); font-size:0.85rem; line-height:1.5;}
+  textarea:focus, input:focus{outline:none; border-color:#555;}
+  .pwrow{display:flex; gap:0.5rem;}
+  .pwrow input{flex:1;}
+  .btn-ghost{
+    cursor:pointer; background:var(--panel2); color:var(--muted); border:1px solid var(--border);
+    border-radius:12px; font-weight:500; font-size:0.85rem; padding:0.8rem 1rem; font-family:inherit;
+  }
+  .btn-ghost:active{transform:scale(0.97);}
+
+  .hint{font-size:0.76rem; color:var(--muted); margin-top:0.5rem; line-height:1.5;}
+  .status{font-size:0.82rem; margin-top:0.9rem; min-height:1.2em;}
+  .status.ok{color:var(--accent2);}
+  .status.err{color:var(--danger);}
+  .out{margin-top:1.1rem;}
+  .out-box{
+    background:var(--panel); border:1px solid var(--border);
+    border-radius:12px; padding:0.85rem; font-family:var(--mono); font-size:0.85rem;
+    white-space:pre-wrap; word-break:break-word; min-height:56px; line-height:1.6;
+  }
+  .copybar{display:flex; justify-content:flex-end; gap:0.5rem; margin-top:0.6rem;}
+  select{
+    width:100%; background:var(--panel); border:1px solid var(--border);
+    border-radius:12px; color:var(--text); padding:0.8rem 0.9rem;
+    font-family:inherit; font-size:0.95rem; -webkit-appearance:none; appearance:none;
+  }
+  .contact-card{
+    background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    padding:0.85rem 0.9rem; margin-top:0.7rem; display:flex; align-items:center; justify-content:space-between; gap:0.6rem;
+  }
+  .contact-card .cname{font-weight:600; font-size:0.92rem;}
+  .contact-card .ccode{color:var(--muted); font-family:var(--mono); font-size:0.72rem; margin-top:0.2rem; word-break:break-all;}
+  .contact-empty{color:var(--muted); font-size:0.85rem; margin-top:0.8rem; line-height:1.5;}
+  .row2{display:flex; gap:0.5rem;}
+  .row2 > *{flex:1;}
+  .badge{
+    display:inline-block; font-size:0.68rem; padding:0.2rem 0.55rem; border-radius:100px;
+    background:rgba(34,195,166,0.15); color:var(--accent2); margin-left:0.4rem; font-weight:600;
+    text-transform:none; letter-spacing:0;
+  }
+
+  /* ---- shiny CTA button (adapted from provided component) ---- */
+  @property --gradient-angle{ syntax:"<angle>"; initial-value:0deg; inherits:false; }
+  @property --gradient-angle-offset{ syntax:"<angle>"; initial-value:0deg; inherits:false; }
+  @property --gradient-percent{ syntax:"<percentage>"; initial-value:5%; inherits:false; }
+  @property --gradient-shine{ syntax:"<color>"; initial-value:white; inherits:false; }
+
+  .shiny-cta{
+    --shiny-cta-bg:#000000; --shiny-cta-bg-subtle:#1a1818; --shiny-cta-fg:#ffffff;
+    --shiny-cta-highlight:#4f8cff; --shiny-cta-highlight-subtle:#8fb4ff;
+    --animation: gradient-angle linear infinite; --duration:3s; --shadow-size:2px;
+    --transition:800ms cubic-bezier(0.25,1,0.5,1);
+    isolation:isolate; position:relative; overflow:hidden; cursor:pointer;
+    outline-offset:4px; width:100%; margin-top:1.4rem; padding:1rem 1.5rem;
+    font-family:'Inter',sans-serif; font-size:1rem; line-height:1.2; font-weight:600;
+    border:1px solid transparent; border-radius:360px; color:var(--shiny-cta-fg);
+    background: linear-gradient(var(--shiny-cta-bg), var(--shiny-cta-bg)) padding-box,
+      conic-gradient(from calc(var(--gradient-angle) - var(--gradient-angle-offset)),
+        transparent, var(--shiny-cta-highlight) var(--gradient-percent),
+        var(--gradient-shine) calc(var(--gradient-percent) * 2),
+        var(--shiny-cta-highlight) calc(var(--gradient-percent) * 3),
+        transparent calc(var(--gradient-percent) * 4)) border-box;
+    box-shadow: inset 0 0 0 1px var(--shiny-cta-bg-subtle);
+    transition: var(--transition);
+    transition-property: --gradient-angle-offset, --gradient-percent, --gradient-shine;
+  }
+  .shiny-cta::before, .shiny-cta::after, .shiny-cta .shine-inner::before{
+    content:""; pointer-events:none; position:absolute;
+    inset-inline-start:50%; inset-block-start:50%; translate:-50% -50%; z-index:-1;
+  }
+  .shiny-cta:active{ translate:0 1px; }
+  .shiny-cta::before{
+    --size: calc(100% - var(--shadow-size) * 3); --position:2px; --space: calc(var(--position) * 2);
+    width:var(--size); height:var(--size);
+    background: radial-gradient(circle at var(--position) var(--position), white calc(var(--position) / 4), transparent 0) padding-box;
+    background-size: var(--space) var(--space); background-repeat: space;
+    mask-image: conic-gradient(from calc(var(--gradient-angle) + 45deg), black, transparent 10% 90%, black);
+    border-radius:inherit; opacity:0.4; z-index:-1;
+  }
+  .shiny-cta::after{
+    --animation: shimmer linear infinite; width:100%; aspect-ratio:1;
+    background: linear-gradient(-50deg, transparent, var(--shiny-cta-highlight), transparent);
+    mask-image: radial-gradient(circle at bottom, transparent 40%, black); opacity:0.6;
+  }
+  .shiny-cta .shine-inner{ z-index:1; position:relative; }
+  .shiny-cta .shine-inner::before{
+    --size: calc(100% + 1rem); width:var(--size); height:var(--size);
+    box-shadow: inset 0 -1ex 2rem 4px var(--shiny-cta-highlight);
+    opacity:0; transition: opacity var(--transition);
+    animation: calc(var(--duration) * 1.5) breathe linear infinite;
+  }
+  .shiny-cta, .shiny-cta::before, .shiny-cta::after{
+    animation: var(--animation) var(--duration), var(--animation) calc(var(--duration) / 0.4) reverse paused;
+    animation-composition: add;
+  }
+  .shiny-cta:is(:hover,:focus-visible){
+    --gradient-percent:20%; --gradient-angle-offset:95deg; --gradient-shine: var(--shiny-cta-highlight-subtle);
+  }
+  .shiny-cta:is(:hover,:focus-visible), .shiny-cta:is(:hover,:focus-visible)::before, .shiny-cta:is(:hover,:focus-visible)::after{
+    animation-play-state: running;
+  }
+  .shiny-cta:is(:hover,:focus-visible) .shine-inner::before{ opacity:1; }
+  @keyframes gradient-angle{ to{ --gradient-angle:360deg; } }
+  @keyframes shimmer{ to{ rotate:360deg; } }
+  @keyframes breathe{ from,to{ scale:1; } 50%{ scale:1.2; } }
+
+  /* ---- rainbow button (ported from rainbow-button.tsx) ---- */
+  @keyframes rainbow-shift{ to{ background-position: 200% 0; } }
+  .rainbow-btn{
+    position:relative; isolation:isolate; overflow:hidden; cursor:pointer;
+    width:100%; margin-top:1.4rem; padding:1rem 1.5rem;
+    font-family:inherit; font-size:0.95rem; line-height:1.2; font-weight:600;
+    color:#fff; border:1px solid transparent; border-radius:360px;
+    background-size:200% auto;
+    background-image:
+      linear-gradient(#000,#000),
+      linear-gradient(#000 50%, rgba(0,0,0,0.6) 80%, rgba(0,0,0,0) 100%),
+      linear-gradient(90deg,
+        hsl(var(--color-1)), hsl(var(--color-5)), hsl(var(--color-3)),
+        hsl(var(--color-4)), hsl(var(--color-2)));
+    background-origin:border-box;
+    background-clip:padding-box, border-box, border-box;
+    animation: rainbow-shift 3s linear infinite;
+    transition: transform 120ms ease;
+  }
+  .rainbow-btn::before{
+    content:""; position:absolute; z-index:-1;
+    bottom:-20%; left:50%; translate:-50% 0;
+    width:60%; height:20%;
+    background-image:linear-gradient(90deg,
+      hsl(var(--color-1)), hsl(var(--color-5)), hsl(var(--color-3)),
+      hsl(var(--color-4)), hsl(var(--color-2)));
+    background-size:200% auto;
+    filter:blur(0.8rem);
+    animation: rainbow-shift 3s linear infinite;
+  }
+  .rainbow-btn:active{ transform:scale(0.98); }
+
+  /* ---- bottom tab bar ---- */
+  nav.tabbar{
+    position:fixed; left:0; right:0; bottom:0; z-index:10;
+    display:flex; justify-content:center;
+    padding-bottom: var(--safe-bottom);
+    background: rgba(10,10,11,0.85); backdrop-filter: blur(20px);
+    border-top:1px solid var(--border);
+  }
+  .tabbar-inner{ max-width:520px; width:100%; display:flex; padding:0.4rem 1rem; }
+  .tabbtn{
+    flex:1; display:flex; flex-direction:column; align-items:center; gap:0.2rem;
+    background:none; border:none; color:var(--muted); font-family:inherit;
+    font-size:0.72rem; font-weight:500; padding:0.5rem 0; cursor:pointer;
+  }
+  .tabbtn .ic{ width:22px; height:22px; }
+  .tabbtn.active{ color:#fff; }
+  .tabbtn.active .ic circle, .tabbtn.active .ic path{ stroke:#fff; }
+</style>
+</head>
+<body>
+
+<canvas id="sparks"></canvas>
+
+<div class="app">
+  <header>
+    <p class="wordmark"><span id="wordmarkText">STEALTH</span></p>
+    <p class="sub" id="tagline">Encrypt a message and hide it inside ordinary text. Nothing leaves this device.</p>
+  </header>
+
+  <!-- HIDE SCREEN -->
+  <section class="screen active" id="screen-hide">
+    <label>Secret message</label>
+    <textarea id="secretMsg" placeholder="The thing you actually want to say..."></textarea>
+
+    <label>Cover text</label>
+    <textarea id="coverText" placeholder="Hey! Just checking in — hope your week is going well."></textarea>
+
+    <label>Contact</label>
+    <select id="hideContact"></select>
+    <div class="hint">Encryption key is generated automatically for this contact — no password to remember or type.</div>
+
+    <button class="rainbow-btn" id="btnHide" type="button">Hide &amp; encrypt</button>
+    <div class="status" id="hideStatus"></div>
+
+    <div class="out" id="hideOut" style="display:none;">
+      <label style="margin-top:0;">Output <span class="badge" id="hideSizeBadge"></span></label>
+      <div class="out-box" id="hideResult"></div>
+      <div class="copybar">
+        <button class="btn-ghost" id="copyHide" type="button">Copy to clipboard</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- REVEAL SCREEN -->
+  <section class="screen" id="screen-reveal">
+    <label>Text containing a hidden message</label>
+    <textarea id="revealInput" placeholder="Paste the text you received here..."></textarea>
+
+    <label>Contact</label>
+    <select id="revealContact"></select>
+
+    <button class="shiny-cta" id="btnReveal" type="button">
+      <span class="shine-inner">Decrypt</span>
+    </button>
+    <div class="status" id="revealStatus"></div>
+
+    <div class="out" id="revealOut" style="display:none;">
+      <label style="margin-top:0;">Revealed message</label>
+      <div class="out-box" id="revealResult"></div>
+    </div>
+  </section>
+
+  <!-- CONTACTS SCREEN -->
+  <section class="screen" id="screen-contacts">
+    <label>Add a new contact</label>
+    <input type="text" id="newContactName" placeholder="Contact name">
+    <div class="row2" style="margin-top:0.6rem;">
+      <button class="btn-ghost" id="btnGenerateContact" type="button">Generate new</button>
+      <button class="btn-ghost" id="btnPairContact" type="button">Pair with code</button>
+    </div>
+    <textarea id="pairCodeInput" placeholder="Paste the code your contact shared with you" style="display:none; margin-top:0.6rem; min-height:60px;"></textarea>
+    <div class="hint">"Generate new" creates a fresh key and shows a code to send your contact through another app (iMessage, in person, etc). "Pair with code" is what they use to add you back — once, then encryption is automatic from then on.</div>
+    <div class="status" id="contactStatus"></div>
+
+    <label style="margin-top:1.6rem;">Your contacts</label>
+    <div id="contactList"></div>
+    <div class="contact-empty" id="contactEmpty">No contacts yet.</div>
+  </section>
+</div>
+
+<nav class="tabbar">
+  <div class="tabbar-inner">
+    <button class="tabbtn active" data-screen="hide" type="button">
+      <svg class="ic" viewBox="0 0 24 24" fill="none"><path d="M3 12s3.5-7 9-7 9 7 9 7-3.5 7-9 7-9-7-9-7Z" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="2.6" stroke="currentColor" stroke-width="1.6"/></svg>
+      Hide
+    </button>
+    <button class="tabbtn" data-screen="reveal" type="button">
+      <svg class="ic" viewBox="0 0 24 24" fill="none"><rect x="5" y="10.5" width="14" height="9" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" stroke="currentColor" stroke-width="1.6"/></svg>
+      Reveal
+    </button>
+    <button class="tabbtn" data-screen="contacts" type="button">
+      <svg class="ic" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8.5" r="3.2" stroke="currentColor" stroke-width="1.6"/><path d="M5 19c0-3.3 3.1-6 7-6s7 2.7 7 6" stroke="currentColor" stroke-width="1.6"/></svg>
+      Contacts
+    </button>
+  </div>
+</nav>
+
+<script>
+// ---------- tab switching ----------
+document.querySelectorAll('.tabbtn').forEach(t=>{
+  t.addEventListener('click', ()=>{
+    document.querySelectorAll('.tabbtn').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('screen-'+t.dataset.screen).classList.add('active');
+    const taglines = {
+      hide: 'Encrypt a message and hide it inside ordinary text. Nothing leaves this device.',
+      reveal: 'Paste text from a contact to reveal what is hidden inside it.',
+      contacts: 'Pair with a contact once — encryption is automatic every time after that.'
+    };
+    document.getElementById('tagline').textContent = taglines[t.dataset.screen];
+    if(t.dataset.screen === 'hide' || t.dataset.screen === 'reveal') refreshContactSelects();
+  });
+});
+
+// ---------- crypto helpers ----------
+const enc = new TextEncoder();
+const dec = new TextDecoder();
+
+function base64ToBytes(b64){
+  const bin = atob(b64.trim().replace(/[^A-Za-z0-9+/=]/g,''));
+  const bytes = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+function bytesToBase64(bytes){
+  let bin = '';
+  for(const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin);
+}
+
+// Each contact holds a random 256-bit key (the "code" you exchange once,
+// out of band). Every message to/from that contact reuses it automatically —
+// no password is ever typed for hide/reveal.
+async function importContactKey(secretBase64){
+  const raw = base64ToBytes(secretBase64);
+  return crypto.subtle.importKey('raw', raw, { name:'AES-GCM' }, false, ['encrypt','decrypt']);
+}
+
+async function encryptMessage(message, key){
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ciphertext = await crypto.subtle.encrypt({name:'AES-GCM', iv}, key, enc.encode(message));
+  const combined = new Uint8Array(iv.length + ciphertext.byteLength);
+  combined.set(iv, 0);
+  combined.set(new Uint8Array(ciphertext), iv.length);
+  return combined;
+}
+
+async function decryptMessage(combined, key){
+  const iv = combined.slice(0,12);
+  const ciphertext = combined.slice(12);
+  const plaintext = await crypto.subtle.decrypt({name:'AES-GCM', iv}, key, ciphertext);
+  return dec.decode(plaintext);
+}
+
+// ---------- binary <-> zero-width encoding ----------
+const ZW0 = '\u200B';
+const ZW1 = '\u200C';
+const ZWEND = '\u200D';
+
+function bytesToZeroWidth(bytes){
+  let out = '';
+  for(const byte of bytes){
+    for(let i=7;i>=0;i--) out += ((byte >> i) & 1) ? ZW1 : ZW0;
+  }
+  return out + ZWEND;
+}
+
+function zeroWidthToBytes(str){
+  const idx = str.indexOf(ZWEND);
+  const payload = idx === -1 ? str : str.slice(0, idx);
+  const bits = [];
+  for(const ch of payload){
+    if(ch === ZW0) bits.push(0);
+    else if(ch === ZW1) bits.push(1);
+  }
+  if(bits.length === 0 || bits.length % 8 !== 0) return null;
+  const bytes = new Uint8Array(bits.length/8);
+  for(let i=0;i<bytes.length;i++){
+    let byte = 0;
+    for(let b=0;b<8;b++) byte = (byte<<1) | bits[i*8+b];
+    bytes[i] = byte;
+  }
+  return bytes;
+}
+
+function extractZeroWidthChars(text){
+  return [...text].filter(ch => ch===ZW0 || ch===ZW1 || ch===ZWEND).join('');
+}
+
+// ---------- contact storage ----------
+const CONTACTS_KEY = 'stealth_contacts_v1';
+
+function loadContacts(){
+  try{ return JSON.parse(localStorage.getItem(CONTACTS_KEY)) || []; }
+  catch(e){ return []; }
+}
+function saveContacts(list){
+  localStorage.setItem(CONTACTS_KEY, JSON.stringify(list));
+}
+
+function renderContactList(){
+  const contacts = loadContacts();
+  const listEl = document.getElementById('contactList');
+  const emptyEl = document.getElementById('contactEmpty');
+  listEl.innerHTML = '';
+  emptyEl.style.display = contacts.length ? 'none' : 'block';
+  contacts.forEach(c=>{
+    const card = document.createElement('div');
+    card.className = 'contact-card';
+    card.innerHTML = `
+      <div style="min-width:0;">
+        <div class="cname"></div>
+        <div class="ccode">Tap to view/copy share code</div>
+      </div>
+      <button class="btn-ghost" type="button" style="flex:0 0 auto;">Remove</button>
+    `;
+    card.querySelector('.cname').textContent = c.name;
+    card.querySelector('.ccode').addEventListener('click', (e)=>{
+      e.target.textContent = c.secret;
+      navigator.clipboard.writeText(c.secret).catch(()=>{});
+    });
+    card.querySelector('button').addEventListener('click', ()=>{
+      const remaining = loadContacts().filter(x=>x.id !== c.id);
+      saveContacts(remaining);
+      renderContactList();
+      refreshContactSelects();
+    });
+    listEl.appendChild(card);
+  });
+}
+
+function refreshContactSelects(){
+  const contacts = loadContacts();
+  ['hideContact','revealContact'].forEach(id=>{
+    const sel = document.getElementById(id);
+    const prev = sel.value;
+    sel.innerHTML = '';
+    if(!contacts.length){
+      const opt = document.createElement('option');
+      opt.textContent = 'No contacts yet — add one in the Contacts tab';
+      opt.value = '';
+      sel.appendChild(opt);
+      return;
+    }
+    contacts.forEach(c=>{
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.name;
+      sel.appendChild(opt);
+    });
+    if(contacts.some(c=>c.id === prev)) sel.value = prev;
+  });
+}
+
+document.getElementById('btnGenerateContact').addEventListener('click', ()=>{
+  document.getElementById('pairCodeInput').style.display = 'none';
+  addContactFlow(null);
+});
+document.getElementById('btnPairContact').addEventListener('click', ()=>{
+  const box = document.getElementById('pairCodeInput');
+  if(box.style.display === 'none'){ box.style.display = 'block'; box.focus(); return; }
+  addContactFlow(box.value.trim());
+});
+
+function addContactFlow(pastedCode){
+  const status = document.getElementById('contactStatus');
+  status.className = 'status'; status.textContent = '';
+  const name = document.getElementById('newContactName').value.trim();
+  if(!name){ status.className='status err'; status.textContent='Enter a contact name first.'; return; }
+
+  let secret;
+  if(pastedCode){
+    try{
+      const raw = base64ToBytes(pastedCode);
+      if(raw.length !== 32) throw new Error('bad length');
+      secret = pastedCode.trim();
+    } catch(e){
+      status.className='status err'; status.textContent='That code doesn\'t look valid — check it was pasted in full.';
+      return;
+    }
+  } else {
+    secret = bytesToBase64(crypto.getRandomValues(new Uint8Array(32)));
+  }
+
+  const contacts = loadContacts();
+  contacts.push({ id: crypto.randomUUID(), name, secret });
+  saveContacts(contacts);
+
+  document.getElementById('newContactName').value = '';
+  document.getElementById('pairCodeInput').value = '';
+  document.getElementById('pairCodeInput').style.display = 'none';
+  renderContactList();
+  refreshContactSelects();
+
+  if(pastedCode){
+    status.className='status ok';
+    status.textContent = name + ' added. Encryption with them is automatic now.';
+  } else {
+    status.className='status ok';
+    status.textContent = name + ' added. Share this code with them through another channel — then have them paste it in via "Pair with code" using your name.';
+    navigator.clipboard.writeText(secret).catch(()=>{});
+  }
+}
+
+renderContactList();
+refreshContactSelects();
+
+// ---------- hide flow ----------
+document.getElementById('btnHide').addEventListener('click', async ()=>{
+  const status = document.getElementById('hideStatus');
+  const outWrap = document.getElementById('hideOut');
+  outWrap.style.display = 'none';
+  status.className = 'status';
+  status.textContent = '';
+
+  const secret = document.getElementById('secretMsg').value;
+  const cover = document.getElementById('coverText').value || 'Hey, hope you\'re doing well!';
+  const contactId = document.getElementById('hideContact').value;
+  const contact = loadContacts().find(c=>c.id === contactId);
+
+  if(!secret.trim()){ status.className='status err'; status.textContent='Enter a secret message first.'; return; }
+  if(!contact){ status.className='status err'; status.textContent='Add and select a contact first (Contacts tab).'; return; }
+
+  try{
+    const key = await importContactKey(contact.secret);
+    const combined = await encryptMessage(secret, key);
+    const zw = bytesToZeroWidth(combined);
+    const words = cover.split(' ');
+    let result;
+    if(words.length > 1){
+      result = words[0] + zw + ' ' + words.slice(1).join(' ');
+    } else {
+      result = cover + zw;
+    }
+    document.getElementById('hideResult').textContent = result;
+    document.getElementById('hideSizeBadge').textContent = combined.length + ' bytes hidden';
+    outWrap.style.display = 'block';
+    status.className = 'status ok';
+    status.textContent = 'Message encrypted and embedded. The text below looks completely normal.';
+  } catch(e){
+    status.className = 'status err';
+    status.textContent = 'Encryption failed: ' + e.message;
+  }
+});
+
+document.getElementById('copyHide').addEventListener('click', ()=>{
+  const text = document.getElementById('hideResult').textContent;
+  navigator.clipboard.writeText(text).then(()=>{
+    const btn = document.getElementById('copyHide');
+    const orig = btn.textContent;
+    btn.textContent = 'Copied';
+    setTimeout(()=>btn.textContent = orig, 1400);
+  });
+});
+
+// ---------- reveal flow ----------
+document.getElementById('btnReveal').addEventListener('click', async ()=>{
+  const status = document.getElementById('revealStatus');
+  const outWrap = document.getElementById('revealOut');
+  outWrap.style.display = 'none';
+  status.className = 'status';
+  status.textContent = '';
+
+  const input = document.getElementById('revealInput').value;
+  const contactId = document.getElementById('revealContact').value;
+  const contact = loadContacts().find(c=>c.id === contactId);
+
+  if(!input.trim()){ status.className='status err'; status.textContent='Paste the text containing a hidden message.'; return; }
+  if(!contact){ status.className='status err'; status.textContent='Add and select a contact first (Contacts tab).'; return; }
+
+  const zwChars = extractZeroWidthChars(input);
+  if(!zwChars){
+    status.className='status err';
+    status.textContent = 'No hidden payload detected in this text.';
+    return;
+  }
+
+  const bytes = zeroWidthToBytes(zwChars);
+  if(!bytes){
+    status.className='status err';
+    status.textContent = 'Hidden payload looks corrupted or incomplete.';
+    return;
+  }
+
+  try{
+    const key = await importContactKey(contact.secret);
+    const plaintext = await decryptMessage(bytes, key);
+    document.getElementById('revealResult').textContent = plaintext;
+    outWrap.style.display = 'block';
+    status.className = 'status ok';
+    status.textContent = 'Decrypted successfully.';
+  } catch(e){
+    status.className = 'status err';
+    status.textContent = 'Decryption failed — wrong contact selected, or the text was altered.';
+  }
+});
+
+// ---------- spark particle background (ported from spark-effect.tsx) ----------
+(function(){
+  const canvas = document.getElementById('sparks');
+  const ctx = canvas.getContext('2d');
+  const OPT = {
+    amount: window.innerWidth < 520 ? 120 : 220,
+    speed: window.innerWidth < 520 ? 0.05 : 0.05,
+    lifetime: 200,
+    direction: { x: -0.5, y: 1 },
+    size: [2, 2],
+    maxopacity: 0.9,
+    color: '150, 150, 150',
+    randColor: false,
+    acceleration: [5, 40]
+  };
+  let sparks = [];
+
+  function setCanvasSize(){
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  function rand(min, max){ return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+  function Spark(x, y){
+    this.x = x; this.y = y; this.age = 0;
+    this.acceleration = rand(OPT.acceleration[0], OPT.acceleration[1]);
+    this.color = OPT.randColor ? `${rand(0,255)},${rand(0,255)},${rand(0,255)}` : OPT.color;
+    this.opacity = OPT.maxopacity;
+    this.go = function(){
+      this.x += OPT.speed * OPT.direction.x * this.acceleration / 2;
+      this.y += OPT.speed * OPT.direction.y * this.acceleration / 2;
+      this.opacity = OPT.maxopacity - (++this.age / OPT.lifetime);
+    };
+  }
+  function addSpark(){
+    const x = rand(-200, canvas.width + 200);
+    const y = rand(-200, canvas.height + 200);
+    sparks.push(new Spark(x, y));
+  }
+  function drawSpark(spark){
+    const x = spark.x, y = spark.y;
+    spark.go();
+    ctx.beginPath();
+    ctx.fillStyle = `rgba(${spark.color}, ${Math.max(spark.opacity,0)})`;
+    ctx.rect(x, y, OPT.size[0], OPT.size[1]);
+    ctx.fill();
+  }
+  function draw(){
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for(let i = sparks.length - 1; i >= 0; i--){
+      if(sparks[i].opacity <= 0) sparks.splice(i, 1);
+      else drawSpark(sparks[i]);
+    }
+    requestAnimationFrame(draw);
+  }
+  setCanvasSize();
+  window.addEventListener('resize', setCanvasSize);
+  setInterval(()=>{ if(sparks.length < OPT.amount) addSpark(); }, 1000 / OPT.amount);
+  requestAnimationFrame(draw);
+})();
+
+// ---------- title text-scramble (ported from text-scramble.tsx) ----------
+(function(){
+  const el = document.getElementById('wordmarkText');
+  const finalText = el.textContent;
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const duration = 1.1, speed = 0.045;
+  const steps = duration / speed;
+  let step = 0;
+  const interval = setInterval(()=>{
+    let scrambled = '';
+    const progress = step / steps;
+    for(let i=0;i<finalText.length;i++){
+      if(finalText[i] === ' '){ scrambled += ' '; continue; }
+      scrambled += (progress * finalText.length > i)
+        ? finalText[i]
+        : chars[Math.floor(Math.random() * chars.length)];
+    }
+    el.textContent = scrambled;
+    step++;
+    if(step > steps){
+      clearInterval(interval);
+      el.textContent = finalText;
+    }
+  }, speed * 1000);
+})();
+</script>
+</body>
+</html>
